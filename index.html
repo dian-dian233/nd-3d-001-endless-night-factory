@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>无人工厂 · 永夜车间 | ND-3D-001</title>
+<meta name="description" content="Three.js WebGL2 程序化生成的无人化工厂 3D 交互场景" />
+<link rel="stylesheet" href="./style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+
+<canvas id="scene-canvas"></canvas>
+
+<!-- ============ 加载层 ============ -->
+<div id="loader">
+  <div class="loader-inner">
+    <div class="loader-kicker">ND-3D-001 / UNMANNED FACTORY</div>
+    <h1 class="loader-title">无人工厂 <span>·</span> 永夜车间</h1>
+    <div class="loader-bar-wrap"><div id="loader-bar"></div></div>
+    <div class="loader-meta"><span id="loader-text">初始化渲染器…</span><span id="loader-pct">0%</span></div>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+
+  <!-- 左上：标题 -->
+  <div class="hud-block" id="brand">
+    <div class="brand-kicker">ND-3D-001</div>
+    <div class="brand-title">无人工厂 · 永夜车间</div>
+    <div class="brand-sub">24H UNMANNED LINE / SECTOR B7</div>
+  </div>
+
+  <!-- 左上：实时数据 -->
+  <div class="hud-block" id="stats">
+    <div class="block-head">实时数据 <i>LIVE</i></div>
+    <div class="stat-row"><span class="stat-label">产量</span><span class="stat-num" id="stats-yield">0</span><span class="stat-unit">件</span></div>
+    <div class="stat-row"><span class="stat-label">节拍</span><span class="stat-num" id="stats-cycle">0.0</span><span class="stat-unit">s/件</span></div>
+    <div class="stat-row"><span class="stat-label">在线设备</span><span class="stat-num" id="stats-online">0</span><span class="stat-unit">台</span></div>
+    <div class="stat-row"><span class="stat-label">稼动率</span><span class="stat-num" id="stats-oee">0.0</span><span class="stat-unit">%</span></div>
+  </div>
+
+  <!-- 右上：机位 -->
+  <div class="hud-block" id="cams">
+    <div class="block-head">机位 <i>VIEW</i></div>
+    <div class="btn-row">
+      <button class="btn" id="btn-preset-1">①入口低角</button>
+      <button class="btn" id="btn-preset-2">②中段侧视</button>
+      <button class="btn" id="btn-preset-3">③顶部全景</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn wide" id="btn-cruise">一键巡航巡线</button>
+      <button class="btn wide" id="btn-cinematic">电影运镜 · 空格</button>
+    </div>
+  </div>
+
+  <!-- 右下：控制面板 -->
+  <div class="hud-block" id="panel">
+    <div class="block-head">控制面板 <i>HUD</i></div>
+
+    <div class="ctl">
+      <label for="slider-speed">传送带速度 <b id="val-speed">1.0x</b></label>
+      <input type="range" id="slider-speed" min="0" max="3" step="0.05" value="1" />
+    </div>
+
+    <div class="ctl">
+      <label>机械臂状态</label>
+      <div class="btn-row">
+        <button class="btn on" id="btn-arms-run">运行</button>
+        <button class="btn" id="btn-arms-idle">待机</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <label>灯光预设</label>
+      <div class="btn-row wrap">
+        <button class="btn on" data-light="cold">冷蓝</button>
+        <button class="btn" data-light="amber">琥珀</button>
+        <button class="btn" data-light="emergency">应急红</button>
+        <button class="btn" data-light="moon">熄灯月色</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <label for="slider-particles">粒子密度 <b id="val-particles">100%</b></label>
+      <input type="range" id="slider-particles" min="0" max="1.5" step="0.05" value="1" />
+    </div>
+
+    <div class="ctl">
+      <label>场景</label>
+      <div class="btn-row wrap">
+        <button class="btn" id="btn-section">剖面模式</button>
+        <button class="btn" id="btn-daynight">切白班</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 悬浮信息卡 -->
+  <div id="hover-card">
+    <div class="hc-head"><span id="hc-model">—</span><span class="hc-tag">六轴工业臂</span></div>
+    <div class="hc-row"><span>节拍</span><b id="hc-cycle">—</b></div>
+    <div class="hc-row"><span>状态</span><b id="hc-status">—</b></div>
+    <div class="hc-row"><span>累计件数</span><b id="hc-count">—</b></div>
+    <div class="hc-tip">点击进入跟随视角</div>
+  </div>
+
+  <!-- 故障窗 -->
+  <div id="fault-modal">
+    <div class="fault-box">
+      <div class="fault-head"><span class="fault-dot"></span><span id="fault-title">设备报警</span></div>
+      <div class="fault-body" id="fault-body">—</div>
+      <div class="btn-row"><button class="btn" id="fault-close">确认收到</button></div>
+    </div>
+  </div>
+
+  <div id="fps-badge">-- FPS</div>
+  <div id="quality-badge"></div>
+
+  <div id="help-box">
+    <div class="block-head">操作说明 <i>HELP</i></div>
+    <ul>
+      <li><b>左键拖动</b> 旋转 · <b>滚轮</b> 缩放 · <b>右键拖动</b> 平移</li>
+      <li><b>悬停机械臂</b> 高亮并显示信息卡 · <b>单击</b> 进入跟随视角，再点退出</li>
+      <li><b>空格</b> 电影运镜 · <b>1 / 2 / 3</b> 切换机位 · <b>C</b> 巡航</li>
+      <li><b>点击报警红灯</b> 查看故障提示 · <b>P</b> 剖面 · <b>L</b> 昼夜</li>
+    </ul>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
